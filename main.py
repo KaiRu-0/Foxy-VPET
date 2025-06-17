@@ -17,8 +17,8 @@ class VirtualPet(QWidget):
 		
 		# Available animation states and their properties
 		self.animation_states = {
-			'idle': {'weight': 0.0, 'loop': True},
-			'walk': {'weight': 0.8, 'loop': True},
+			'idle': {'weight': 0.1, 'loop': True},
+			'walk': {'weight': 0.7, 'loop': True},
 			'sleep': {'weight': 0.1, 'loop': True},
 			'eat': {'weight': 0.1, 'loop': False},
 			'excited': {'weight': 0.0, 'loop': False},
