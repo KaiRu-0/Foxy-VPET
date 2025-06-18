@@ -62,7 +62,7 @@ class VirtualPet(QWidget):
 
 	def load_all_animations(self):
 		animations = {}
-		scale_factor = 9.0
+		scale_factor = 2.0
 				
 		for state in self.animation_states:
 			folder_path = os.path.join(self.animations_root, state)
