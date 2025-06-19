@@ -196,7 +196,7 @@ class VirtualPet(QWidget):
 				self.click_count += 1
 				if self.click_count >= 2:
 					self.change_state('excited')
-					QTimer.singleShot(2000, lambda: self.change_state('idle'))
+					QTimer.singleShot(1000, self.jump_to_cursor)
 			else:
 				self.click_count = 1
 			self.last_click_time = current_time
@@ -213,7 +213,6 @@ class VirtualPet(QWidget):
 		if event.button() == Qt.LeftButton:
 			self.drag_start_pos = None
 			self.setCursor(Qt.PointingHandCursor)
-	
 			if self.state == 'drag':
 				# Check if pet is outside the control space
 				pet_rect = QRect(self.pos(), self.size())
@@ -227,8 +226,33 @@ class VirtualPet(QWidget):
 						self.control_space.bottom() - self.height()
 					)
 					self.move(new_x, new_y)
-	
 				self.change_state('idle')
+
+	def jump_to_cursor(self):
+		cursor_pos = QCursor.pos()
+		pet_size = self.size()
+
+		# Try placing the pet with its top-left corner at the cursor
+		potential_rect = QRect(cursor_pos, pet_size)
+
+		if self.control_space.contains(potential_rect):
+			self.move(cursor_pos)
+		else:
+			# Clamp jump towards cursor within control space
+			center = self.pos() + QPoint(pet_size.width() // 2, pet_size.height() // 2)
+			vector = cursor_pos - center
+			# Step in the vector direction until we hit the boundary
+			step = 5
+			for dist in range(step, 1000, step):
+				offset = vector * dist / vector.manhattanLength()
+				new_center = center + offset.toPoint()
+				new_topleft = new_center - QPoint(pet_size.width() // 2, pet_size.height() // 2)
+				new_rect = QRect(new_topleft, pet_size)
+				if not self.control_space.contains(new_rect):
+					break
+				last_valid_pos = new_topleft
+			self.move(last_valid_pos)
+		self.change_state('idle')
 
 	def edit_control_space(self):
 		pet_rect = QRect(self.pos(), self.size())
