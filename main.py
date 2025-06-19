@@ -22,7 +22,8 @@ class VirtualPet(QWidget):
 			'sleep': {'weight': 0.1, 'loop': True},
 			'eat': {'weight': 0.1, 'loop': False},
 			'excited': {'weight': 0.0, 'loop': False},
-			'drag': {'weight': 0.0, 'loop': True}
+			'drag': {'weight': 0.0, 'loop': True},
+			'run': {'weight': 0.0, 'loop': True}
 		}
 		
 		self.animations = self.load_all_animations()
@@ -62,7 +63,7 @@ class VirtualPet(QWidget):
 
 	def load_all_animations(self):
 		animations = {}
-		scale_factor = 4.0
+		scale_factor = 0.1
 				
 		for state in self.animation_states:
 			folder_path = os.path.join(self.animations_root, state)
