@@ -63,7 +63,7 @@ class VirtualPet(QWidget):
 
 	def load_all_animations(self):
 		animations = {}
-		scale_factor = 0.1
+		scale_factor = 0.25
 				
 		for state in self.animation_states:
 			folder_path = os.path.join(self.animations_root, state)
@@ -117,7 +117,7 @@ class VirtualPet(QWidget):
 		self.update_window_mask()
 		self.update()
 		
-		if self.state == 'walk' and self.is_moving:
+		if self.state in ['walk', 'run'] and self.is_moving:
 			self.move_toward_target()
 
 	def update_behavior(self):
@@ -152,7 +152,7 @@ class VirtualPet(QWidget):
 			return
 
 		current_pos = self.pos()
-		step_size = 2
+		step_size = 2 if self.state == 'walk' else 6
 		step = QPoint(
 			step_size if self.target_pos.x() > current_pos.x() else -step_size,
 			step_size if self.target_pos.y() > current_pos.y() else -step_size
@@ -233,27 +233,21 @@ class VirtualPet(QWidget):
 		cursor_pos = QCursor.pos()
 		pet_size = self.size()
 
-		# Try placing the pet with its top-left corner at the cursor
-		potential_rect = QRect(cursor_pos, pet_size)
+		# Try placing pet with top-left at cursor
+		target_rect = QRect(cursor_pos, pet_size)
 
-		if self.control_space.contains(potential_rect):
-			self.move(cursor_pos)
+		if self.control_space.contains(target_rect):
+			self.target_pos = cursor_pos
 		else:
-			# Clamp jump towards cursor within control space
-			center = self.pos() + QPoint(pet_size.width() // 2, pet_size.height() // 2)
-			vector = cursor_pos - center
-			# Step in the vector direction until we hit the boundary
-			step = 5
-			for dist in range(step, 1000, step):
-				offset = vector * dist / vector.manhattanLength()
-				new_center = center + offset.toPoint()
-				new_topleft = new_center - QPoint(pet_size.width() // 2, pet_size.height() // 2)
-				new_rect = QRect(new_topleft, pet_size)
-				if not self.control_space.contains(new_rect):
-					break
-				last_valid_pos = new_topleft
-			self.move(last_valid_pos)
-		self.change_state('idle')
+			# Clamp to nearest valid position inside control space
+			new_x = min(max(self.control_space.left(), cursor_pos.x()), self.control_space.right() - pet_size.width())
+			new_y = min(max(self.control_space.top(), cursor_pos.y()), self.control_space.bottom() - pet_size.height())
+			self.target_pos = QPoint(new_x, new_y)
+
+		self.direction = 1 if self.target_pos.x() > self.pos().x() else -1
+		self.change_state('run')
+		self.is_moving = True
+
 
 	def edit_control_space(self):
 		pet_rect = QRect(self.pos(), self.size())
