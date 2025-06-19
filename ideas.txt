@@ -1,0 +1,1 @@
+Pet follow the cursor for 3-5 seconds when it is excited
