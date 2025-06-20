@@ -17,8 +17,8 @@ class VirtualPet(QWidget):
 		
 		# Available animation states and their properties
 		self.animation_states = {
-			'idle': {'weight': 0.1, 'loop': True},
-			'walk': {'weight': 0.7, 'loop': True},
+			'idle': {'weight': 0.3, 'loop': True},
+			'walk': {'weight': 0.5, 'loop': True},
 			'sleep': {'weight': 0.1, 'loop': True},
 			'eat': {'weight': 0.1, 'loop': False},
 			'excited': {'weight': 0.0, 'loop': False},
@@ -63,7 +63,7 @@ class VirtualPet(QWidget):
 
 	def load_all_animations(self):
 		animations = {}
-		scale_factor = 0.25
+		scale_factor = 0.1
 				
 		for state in self.animation_states:
 			folder_path = os.path.join(self.animations_root, state)
