@@ -40,7 +40,9 @@ class VirtualPet(QWidget):
 		self.setCursor(Qt.PointingHandCursor)
 		
 		screen = QApplication.primaryScreen().availableGeometry()
-		self.resize(self.animations['idle'][0].size())
+		frame_size = self.animations['idle'][0].size()
+		side = max(self.max_frame_size.width(), self.max_frame_size.height())
+		self.resize(side, side)
 		self.move(
 			random.randint(100, screen.width() - 200),
 			random.randint(100, screen.height() - 200)
@@ -63,12 +65,14 @@ class VirtualPet(QWidget):
 
 	def load_all_animations(self):
 		animations = {}
-		scale_factor = 0.1
-				
+		scale_factor = 0.25
+		self.max_frame_size = QSize(0, 0)
+		self.content_bounds = {}
+
 		for state in self.animation_states:
 			folder_path = os.path.join(self.animations_root, state)
 			frames = []
-			
+
 			if os.path.exists(folder_path):
 				frame_files = sorted(
 					[f for f in os.listdir(folder_path) if f.endswith('.png')],
@@ -83,27 +87,44 @@ class VirtualPet(QWidget):
 						int(pixmap.height() * scale_factor),
 						Qt.KeepAspectRatio,
 						Qt.SmoothTransformation
-                    )
+					)
 					frames.append(scaled_pixmap)
+
+					# Track max frame size
+					self.max_frame_size.setWidth(max(self.max_frame_size.width(), scaled_pixmap.width()))
+					self.max_frame_size.setHeight(max(self.max_frame_size.height(), scaled_pixmap.height()))
+					img = scaled_pixmap.toImage()
+					bounds = img.alphaChannel().boundingRect()
+					self.content_bounds[(state, len(frames))] = bounds
 			else:
 				print(f"Warning: Missing animation folder '{folder_path}'")
 				os.makedirs(folder_path)
 				print(f"Created empty '{folder_path}' - please add animation frames")
-			
+
 			if len(frames) < 24:
 				print(f"Warning: Only {len(frames)} frames found in '{folder_path}', duplicating to make 24")
 				while len(frames) < 24:
 					frames.extend(frames[:min(len(frames), 24 - len(frames))])
-			
+
 			animations[state] = frames[:24]
-		
+
 		return animations
 
 	def update_window_mask(self):
 		current_frame = self.animations[self.state][self.current_frame]
-		alpha_mask = current_frame.toImage().createAlphaMask()
+		content_rect = current_frame.toImage().alphaChannel().boundingRect()
+		
+		# Create mask from the actual content area
+		mask_img = current_frame.toImage().copy(content_rect)
+		alpha_mask = mask_img.createAlphaMask()
 		region = QRegion(QBitmap.fromImage(alpha_mask))
-		self.setMask(region)
+		
+		# Calculate proper offset based on our painting logic
+		square_size = max(self.max_frame_size.width(), self.max_frame_size.height())
+		x_offset = (self.width() - square_size) // 2 + (square_size - current_frame.width()) // 2 - content_rect.x()
+		y_offset = (self.height() - square_size) // 2 + (square_size - current_frame.height()) // 2 - content_rect.y()
+		
+		self.setMask(region.translated(x_offset, y_offset))
 
 	def update_animation(self):
 		frames = self.animations[self.state]
@@ -134,15 +155,10 @@ class VirtualPet(QWidget):
 		if new_state != self.state:
 			self.state = new_state
 			self.current_frame = 0
-			
-			if self.state == 'walk':
-				screen = QApplication.primaryScreen().availableGeometry()
-				self.target_pos = QPoint(
-					random.randint(50, screen.width() - 100),
-					random.randint(50, screen.height() - 100)
-				)
+	
+			if new_state in ['walk', 'run']:
 				self.is_moving = True
-				self.direction = 1 if self.target_pos.x() > self.pos().x() else -1
+				self.direction = 1 if self.target_pos and self.target_pos.x() > self.pos().x() else -1
 			else:
 				self.is_moving = False
 				self.target_pos = None
@@ -152,7 +168,7 @@ class VirtualPet(QWidget):
 			return
 
 		current_pos = self.pos()
-		step_size = 2 if self.state == 'walk' else 6
+		step_size = 2 if self.state == 'walk' else 10
 		step = QPoint(
 			step_size if self.target_pos.x() > current_pos.x() else -step_size,
 			step_size if self.target_pos.y() > current_pos.y() else -step_size
@@ -177,16 +193,39 @@ class VirtualPet(QWidget):
 			abs(clamped_pos.y() - self.target_pos.y()) < step_size):
 			self.change_state('idle')
 
-	
-
 	def paintEvent(self, event):
 		painter = QPainter(self)
 		current_frame = self.animations[self.state][self.current_frame]
 		
-		if self.direction == -1:
-			current_frame = current_frame.transformed(QTransform().scale(-1, 1))
+		# Get the content bounding rect (non-transparent area)
+		content_rect = current_frame.toImage().alphaChannel().boundingRect()
 		
-		painter.drawPixmap(0, 0, current_frame)
+		# Calculate our reference square size (max dimension of all frames)
+		square_size = max(self.max_frame_size.width(), self.max_frame_size.height())
+		
+		if self.direction == -1:
+			# Create flipped version
+			flipped = current_frame.transformed(QTransform().scale(-1, 1))
+			
+			# Calculate position accounting for both content offset and flip
+			x = (self.width() - square_size) // 2 + (square_size - current_frame.width())
+			y = (self.height() - square_size) // 2 + (square_size - current_frame.height()) // 2
+			
+			# Adjust for content offset
+			x -= content_rect.x()
+			y += content_rect.y()
+			
+			painter.drawPixmap(x, y, flipped)
+		else:
+			# Regular non-flipped case
+			x = (self.width() - square_size) // 2 + (square_size - current_frame.width()) // 2
+			y = (self.height() - square_size) // 2 + (square_size - current_frame.height()) // 2
+			
+			# Adjust for content offset
+			x -= content_rect.x()
+			y -= content_rect.y()
+			
+			painter.drawPixmap(x, y, current_frame)
 
 	def mousePressEvent(self, event):
 		if event.button() == Qt.LeftButton:
@@ -232,22 +271,21 @@ class VirtualPet(QWidget):
 	def jump_to_cursor(self):
 		cursor_pos = QCursor.pos()
 		pet_size = self.size()
-
+	
 		# Try placing pet with top-left at cursor
 		target_rect = QRect(cursor_pos, pet_size)
-
+	
 		if self.control_space.contains(target_rect):
-			self.target_pos = cursor_pos
+			target = cursor_pos
 		else:
-			# Clamp to nearest valid position inside control space
 			new_x = min(max(self.control_space.left(), cursor_pos.x()), self.control_space.right() - pet_size.width())
 			new_y = min(max(self.control_space.top(), cursor_pos.y()), self.control_space.bottom() - pet_size.height())
-			self.target_pos = QPoint(new_x, new_y)
-
+			target = QPoint(new_x, new_y)
+	
+		self.target_pos = target
 		self.direction = 1 if self.target_pos.x() > self.pos().x() else -1
-		self.change_state('run')
 		self.is_moving = True
-
+		self.change_state('run')
 
 	def edit_control_space(self):
 		pet_rect = QRect(self.pos(), self.size())
@@ -304,7 +342,14 @@ class ControlSpaceEditor(QDialog):
 
 	def paintEvent(self, event):
 		painter = QPainter(self)
-
+		current_frame = self.animations[self.state][self.current_frame]
+		if self.direction == -1:
+			# Flip and shift to correct position
+			transformed = current_frame.transformed(QTransform().scale(-1, 1))
+			painter.drawPixmap(-transformed.width(), 0, transformed)
+		else:
+			painter.drawPixmap(0, 0, current_frame)
+		
 		# semi-transparent background
 		painter.fillRect(self.rect(), QColor(0, 0, 0, 128))
 
