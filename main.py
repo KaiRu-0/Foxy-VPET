@@ -67,7 +67,6 @@ class VirtualPet(QWidget):
 		animations = {}
 		scale_factor = 0.25
 		self.max_frame_size = QSize(0, 0)
-		self.content_bounds = {}
 
 		for state in self.animation_states:
 			folder_path = os.path.join(self.animations_root, state)
@@ -93,9 +92,6 @@ class VirtualPet(QWidget):
 					# Track max frame size
 					self.max_frame_size.setWidth(max(self.max_frame_size.width(), scaled_pixmap.width()))
 					self.max_frame_size.setHeight(max(self.max_frame_size.height(), scaled_pixmap.height()))
-					img = scaled_pixmap.toImage()
-					bounds = img.alphaChannel().boundingRect()
-					self.content_bounds[(state, len(frames))] = bounds
 			else:
 				print(f"Warning: Missing animation folder '{folder_path}'")
 				os.makedirs(folder_path)
@@ -112,19 +108,12 @@ class VirtualPet(QWidget):
 
 	def update_window_mask(self):
 		current_frame = self.animations[self.state][self.current_frame]
-		content_rect = current_frame.toImage().alphaChannel().boundingRect()
-		
-		# Create mask from the actual content area
-		mask_img = current_frame.toImage().copy(content_rect)
-		alpha_mask = mask_img.createAlphaMask()
+		alpha_mask = current_frame.toImage().createAlphaMask()
 		region = QRegion(QBitmap.fromImage(alpha_mask))
-		
-		# Calculate proper offset based on our painting logic
-		square_size = max(self.max_frame_size.width(), self.max_frame_size.height())
-		x_offset = (self.width() - square_size) // 2 + (square_size - current_frame.width()) // 2 - content_rect.x()
-		y_offset = (self.height() - square_size) // 2 + (square_size - current_frame.height()) // 2 - content_rect.y()
-		
-		self.setMask(region.translated(x_offset, y_offset))
+
+		offset_x = (self.width() - current_frame.width()) // 2
+		offset_y = (self.height() - current_frame.height()) // 2
+		self.setMask(region.translated(offset_x, offset_y))
 
 	def update_animation(self):
 		frames = self.animations[self.state]
@@ -193,39 +182,20 @@ class VirtualPet(QWidget):
 			abs(clamped_pos.y() - self.target_pos.y()) < step_size):
 			self.change_state('idle')
 
+	
+
 	def paintEvent(self, event):
 		painter = QPainter(self)
 		current_frame = self.animations[self.state][self.current_frame]
-		
-		# Get the content bounding rect (non-transparent area)
-		content_rect = current_frame.toImage().alphaChannel().boundingRect()
-		
-		# Calculate our reference square size (max dimension of all frames)
-		square_size = max(self.max_frame_size.width(), self.max_frame_size.height())
-		
+	
 		if self.direction == -1:
-			# Create flipped version
-			flipped = current_frame.transformed(QTransform().scale(-1, 1))
-			
-			# Calculate position accounting for both content offset and flip
-			x = (self.width() - square_size) // 2 + (square_size - current_frame.width())
-			y = (self.height() - square_size) // 2 + (square_size - current_frame.height()) // 2
-			
-			# Adjust for content offset
-			x -= content_rect.x()
-			y += content_rect.y()
-			
-			painter.drawPixmap(x, y, flipped)
-		else:
-			# Regular non-flipped case
-			x = (self.width() - square_size) // 2 + (square_size - current_frame.width()) // 2
-			y = (self.height() - square_size) // 2 + (square_size - current_frame.height()) // 2
-			
-			# Adjust for content offset
-			x -= content_rect.x()
-			y -= content_rect.y()
-			
-			painter.drawPixmap(x, y, current_frame)
+			current_frame = current_frame.transformed(QTransform().scale(-1, 1))
+	
+		x = (self.width() - current_frame.width()) // 2
+		y = (self.height() - current_frame.height()) // 2
+		painter.drawPixmap(x, y, current_frame)
+
+
 
 	def mousePressEvent(self, event):
 		if event.button() == Qt.LeftButton:
