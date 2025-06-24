@@ -5,7 +5,6 @@ import time
 from PyQt5.QtCore import Qt, QTimer, QPoint, QRect, QSize
 from PyQt5.QtGui import QPixmap, QBitmap, QPainter, QRegion, QImage, QCursor, QTransform, QPen, QColor
 from PyQt5.QtWidgets import QApplication, QWidget, QMenu, QDialog
-
 class VirtualPet(QWidget):
 	def __init__(self):
 		super().__init__()
@@ -65,7 +64,7 @@ class VirtualPet(QWidget):
 
 	def load_all_animations(self):
 		animations = {}
-		scale_factor = 0.25
+		scale_factor = 0.2
 		self.max_frame_size = QSize(0, 0)
 
 		for state in self.animation_states:
