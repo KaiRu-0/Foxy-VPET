@@ -58,7 +58,7 @@ class FoxyBrain:
         self.learning_rate_negative = 0.05  # Decrease weight on ignore
         
         # Exploration rate (epsilon-greedy)
-        self.exploration_rate = 0.5  # 50% random exploration, 50% exploitation
+        self.exploration_rate = 0.3  # 30% random exploration, 70% exploitation
         
         self.load_brain()
     
@@ -158,7 +158,7 @@ class FoxyWidget(QWidget):
         self.label = QLabel(self)
         
         # Scale factor for pet size
-        self.scale_factor = 0.1  # 10% of original size
+        self.scale_factor = 0.2  # 20% of original size
         
         # Animation state
         self.current_action = 'idle'

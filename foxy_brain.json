@@ -1,19 +1,19 @@
 {
   "weights": {
-    "excited": 1.0999999999999996,
-    "relax": 0.95,
-    "sleep": 1.0499999999999998,
-    "walk": 0.8999999999999999
+    "excited": 1.00,
+    "relax": 1.00,
+    "sleep": 1.00,
+    "walk": 1.00
   },
   "action_counts": {
-    "excited": 6,
-    "relax": 1,
-    "sleep": 3,
-    "walk": 2
+    "excited": 7,
+    "relax": 3,
+    "sleep": 4,
+    "walk": 4
   },
   "positive_feedback": {
     "excited": 2,
-    "relax": 0,
+    "relax": 2,
     "sleep": 1,
     "walk": 0
   }
