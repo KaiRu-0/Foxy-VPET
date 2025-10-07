@@ -1,0 +1,18 @@
+{
+  "action_counts": {
+    "excited": 5,
+    "relax": 1,
+    "sleep": 1,
+    "walk": 3
+  },
+  "positive_feedback": {
+    "excited": 4,
+    "relax": 0,
+    "sleep": 1,
+    "walk": 1
+  },
+  "total_clicks": 6,
+  "total_actions": 10,
+  "last_click_time": 9,
+  "current_time": 10
+}
